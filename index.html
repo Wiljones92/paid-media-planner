@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Paid Media Planner v4</title>
+<title>Paid Media Planner v8</title>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--panel2:#1f232c;--border:#2b303b;--text:#e6e8ec;--muted:#9aa3b2;--accent:#4f8cff;--good:#2ecc71;--warn:#f1c40f;--bad:#e74c3c}
 *{box-sizing:border-box}
@@ -24,9 +24,11 @@ h3{font-size:13px;margin:16px 0 8px;color:var(--muted);text-transform:uppercase;
 label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
 input,select,textarea{width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:7px 8px;border-radius:5px;font:inherit}
 textarea{min-height:60px}
+textarea:disabled{opacity:.5}
 button{background:var(--accent);border:none;color:#fff;padding:8px 14px;border-radius:6px;cursor:pointer;font:inherit}
 button.ghost{background:var(--panel2);border:1px solid var(--border)}
 button.danger{background:var(--bad)}
+button.small{padding:5px 10px;font-size:12px}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{border-bottom:1px solid var(--border);padding:6px 8px;text-align:left;white-space:nowrap}
 th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--panel)}
@@ -44,6 +46,15 @@ td input{min-width:70px;padding:4px 6px}
 .ok{background:rgba(46,204,113,.2);color:var(--good)}.warn{background:rgba(241,196,15,.2);color:var(--warn)}.err{background:rgba(231,76,60,.2);color:var(--bad)}
 .note{color:var(--muted);font-size:12px}
 .hidden{display:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+label.chip#phaseToggle{margin:0}
+label.chip{display:inline-flex;align-items:center;gap:7px;margin:0;padding:6px 12px;border:1px solid var(--border);border-radius:16px;background:var(--panel2);color:var(--text);font-size:13px;cursor:pointer;position:relative;user-select:none}
+label.chip input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+label.chip::before{content:"";width:12px;height:12px;border-radius:50%;border:2px solid var(--muted);box-sizing:border-box}
+label.chip.on{border-color:var(--accent);background:rgba(79,140,255,.15)}
+label.chip.on::before{border-color:var(--accent);background:var(--accent);box-shadow:inset 0 0 0 2px var(--panel2)}
+label.chip:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.field{margin-top:12px}
 .modalbg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:50}.modalbg.hidden{display:none}.modal{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;width:min(640px,92vw)}.modal textarea{min-height:240px;font-family:Consolas,monospace;font-size:12px}
 @media(max-width:1000px){.layout{position:static;display:block;margin-top:56px}.col{border-right:none;border-bottom:1px solid var(--border);overflow:visible;padding-bottom:16px}html,body{height:auto}}
 #emptyState{padding:40px;text-align:center;color:var(--muted)}
@@ -52,7 +63,7 @@ td input{min-width:70px;padding:4px 6px}
 </head>
 <body>
 <header>
-  <div><h1 style="display:inline">Paid Media Planner</h1><span class="ver">v4 · dummy data only · saved in this browser</span></div>
+  <div><h1 style="display:inline">Paid Media Planner</h1><span class="ver">v8 · dummy data only · saved in this browser</span></div>
   <div class="row">
     <button class="ghost" onclick="exportJSON()">Backup JSON</button>
     <button class="ghost" onclick="document.getElementById('imp').click()">Restore JSON</button>
@@ -72,19 +83,27 @@ td input{min-width:70px;padding:4px 6px}
   <div class="col">
     <div class="tabs">
       <button class="tab active" data-tab="brief">1. Brief</button>
-      <button class="tab" data-tab="budget">2. Budget</button>
-      <button class="tab" data-tab="forecast">3. Forecast</button>
-      <button class="tab" data-tab="plan">4. Media Plan</button>
+      <button class="tab" data-tab="audiences">2. Audiences</button>
+      <button class="tab" data-tab="budget">3. Budget</button>
+      <button class="tab" data-tab="forecast">4. Forecast</button>
+      <button class="tab" data-tab="plan">5. Media Plan</button>
       <button class="tab" data-tab="settings">Benchmarks & Fees</button>
     </div>
 
     <div id="emptyState" class="hidden">No campaign selected. Click <b>+ New campaign</b> to start.</div>
     <section id="tab-brief">
       <div class="card"><h2>Campaign Brief</h2><div class="grid" id="briefFields"></div>
-        <div style="margin-top:12px"><label>Target audience</label><textarea data-f="audience" data-k="br-audience"></textarea></div>
         <div style="margin-top:12px"><label>Creative formats</label><textarea data-f="creative" data-k="br-creative"></textarea></div>
+        <p class="note">Target audiences are set up in the <b>2. Audiences</b> tab.</p>
         <div class="row" style="margin-top:12px"><button class="danger" onclick="deleteCampaign()">Delete campaign</button></div>
       </div>
+    </section>
+
+    <section id="tab-audiences" class="hidden">
+      <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Target Audiences</h2><button onclick="addAud()">+ Add audience</button></div>
+        <p class="note" style="margin-bottom:0">Add one card per audience. Tick as many age ranges, genders and exclusions as apply. 3rd-party details unlock once a source is selected.</p>
+        <div class="row" style="margin-top:12px"><b>Budget by audience</b><button class="ghost small" onclick="audEven()">Split evenly</button><span id="audStatus"></span></div></div>
+      <div id="audList"></div>
     </section>
 
     <section id="tab-budget" class="hidden">
@@ -94,8 +113,11 @@ td input{min-width:70px;padding:4px 6px}
         <div class="row" style="margin-top:10px"><button class="ghost" onclick="evenSplit()">Split evenly</button><span id="allocStatus"></span></div>
       </div>
       <div class="card"><h2>Funnel Weighting</h2><div class="grid" id="funnelFields"></div><p class="note" id="funnelStatus"></p></div>
-      <div class="card"><h2>Monthly Phasing</h2><p class="note">Months generated from campaign dates. Default is even phasing. Editing one month rebalances the others so the total stays at 100%.</p>
-        <div class="tablewrap"><table id="phaseTable"></table></div><div class="row" style="margin-top:10px"><button class="ghost" onclick="resetPhase()">Reset to even phasing</button><span id="phaseStatus"></span></div></div>
+      <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Monthly Phasing</h2>
+        <label class="chip" id="phaseToggle"><input type="checkbox" data-k="ph-toggle" onchange="togglePhasing(this.checked)">Use monthly phasing</label></div>
+        <div id="phaseOff" class="note" style="margin-top:10px">Phasing is off. The media plan shows one line per platform × funnel stage for the full flight. Turn it on to split spend by month.</div>
+        <div id="phaseOn"><p class="note">Months generated from campaign dates. Default is even phasing. Editing one month rebalances the others so the total stays at 100%.</p>
+        <div class="tablewrap"><table id="phaseTable"></table></div><div class="row" style="margin-top:10px"><button class="ghost" onclick="resetPhase()">Reset to even phasing</button><span id="phaseStatus"></span></div></div></div>
     </section>
 
     <section id="tab-forecast" class="hidden">
@@ -105,8 +127,9 @@ td input{min-width:70px;padding:4px 6px}
     </section>
 
     <section id="tab-plan" class="hidden">
+      <div class="card"><h2>Budget by Audience</h2><div class="tablewrap"><table id="audPlanTable"></table></div><p class="note" id="audPlanNote" style="margin-bottom:0"></p></div>
       <div class="card"><h2>Media Plan</h2>
-        <div class="row" style="margin-bottom:10px"><button onclick="exportCSV()">Export CSV (Excel)</button><span class="note">One line per platform × funnel stage × month. Phasing and funnel splits are normalised to 100%.</span></div>
+        <div class="row" style="margin-bottom:10px"><button onclick="exportCSV()">Export CSV (Excel)</button><span class="note"><span id="planNote"></span></span></div>
         <div class="tablewrap"><table id="planTable"></table></div></div>
     </section>
 
@@ -138,13 +161,25 @@ const BRIEF=[['client','Client','text'],['brand','Brand','text'],['name','Campai
  ['kpi1','Primary KPI','sel:Reach,Impressions,Views,Clicks,Conversions'],['kpi2','Secondary KPI','sel:None,Reach,Impressions,Views,Clicks,Conversions'],
  ['budget','Gross budget','number'],['currency','Currency','sel:GBP,EUR'],['status','Status','sel:Draft,In Planning,Approved,Live,Completed'],['po','PO number','text']];
 const SYM={GBP:'£',EUR:'€'};
+// Audiences
+const AUD_TYPES=['Broad','Interest-based','Lookalike','1st-party / CRM','Retargeting','3rd-party data','Contextual'];
+const AGES=['18-24','25-34','35-44','45-54','55-64','65+'];
+const GENDERS=['Men','Women'];
+const SOURCES=['None','Epsilon','Lotame','Dynata','LiveRamp','Experian','Acxiom','Other'];
+const EXCL_STD=['Existing customers','Recent converters','Website visitors','App users','Employees','Competitor followers','Under 25s'];
+const AUDDEF={name:'',size:0,type:'Interest-based',ages:[],genders:[],interests:'',source:'None',details:'',exStd:[],exText:'',share:0};
 
 const clone=o=>JSON.parse(JSON.stringify(o));
 let storageOK=true;
 function load(){try{return JSON.parse(localStorage.getItem('pmp_v1')||'null')}catch(e){storageOK=false;return null}}
 let db=load()||{campaigns:[],bench:clone(DEFAULT_BENCH),fees:{...DEFAULT_FEES},active:null};
+function cleanAud(a){const x=Object.assign({},AUDDEF,a||{});
+ return {name:String(x.name??''),size:Math.max(0,Math.round(+x.size||0)),type:AUD_TYPES.includes(x.type)?x.type:AUDDEF.type,
+  ages:AGES.filter(g=>Array.isArray(x.ages)&&x.ages.includes(g)),genders:GENDERS.filter(g=>Array.isArray(x.genders)&&x.genders.includes(g)),
+  interests:String(x.interests??''),source:SOURCES.includes(x.source)?x.source:'None',details:String(x.details??''),
+  exStd:EXCL_STD.filter(v=>Array.isArray(x.exStd)&&x.exStd.includes(v)),exText:String(x.exText??''),share:Math.max(0,Math.min(100,+x.share||0))}}
 function normalise(){db.bench=Object.assign(clone(DEFAULT_BENCH),db.bench||{});PLATFORMS.forEach(p=>db.bench[p]=Object.assign({},DEFAULT_BENCH[p],db.bench[p]));
- db.fees=Object.assign({...DEFAULT_FEES},db.fees||{});db.campaigns=(db.campaigns||[]).map(c=>Object.assign({client:'',brand:'',name:'Untitled',market:'',start:'',end:'',objective:'Awareness',kpi1:'Reach',kpi2:'None',budget:0,currency:'GBP',status:'Draft',po:'',audience:'',creative:'',alloc:{},funnel:{Awareness:100,Consideration:0,Conversion:0},phasing:{}},c));
+ db.fees=Object.assign({...DEFAULT_FEES},db.fees||{});db.campaigns=(db.campaigns||[]).map(c=>Object.assign({client:'',brand:'',name:'Untitled',market:'',start:'',end:'',objective:'Awareness',kpi1:'Reach',kpi2:'None',budget:0,currency:'GBP',status:'Draft',po:'',audience:'',audiences:[],phasingOn:true,creative:'',alloc:{},funnel:{Awareness:100,Consideration:0,Conversion:0},phasing:{}},c));
  const STAT=['Draft','In Planning','Approved','Live','Completed'],num=v=>Math.max(0,Math.min(100,+v||0));let seen=new Set();
  db.campaigns.forEach((c,i)=>{c.id=Number(c.id);if(!Number.isFinite(c.id)||seen.has(c.id))c.id=Date.now()+i;seen.add(c.id);
   if(!STAT.includes(c.status))c.status='Draft';if(!SYM[c.currency])c.currency='GBP';
@@ -156,7 +191,19 @@ function normalise(){db.bench=Object.assign(clone(DEFAULT_BENCH),db.bench||{});P
  });
  PLATFORMS.forEach(p=>['cpm','ctr','vtr','cpa','freq'].forEach(k=>{const v=+db.bench[p][k];db.bench[p][k]=v>0?v:DEFAULT_BENCH[p][k]}));
  Object.keys(DEFAULT_FEES).forEach(k=>db.fees[k]=Math.max(0,+db.fees[k]||0));
- db.campaigns.forEach(c=>{c.budget=Math.max(0,+c.budget||0);['po','audience','creative','name','brand','market','client'].forEach(k=>c[k]=String(c[k]??''))});
+ db.campaigns.forEach(c=>{c.budget=Math.max(0,+c.budget||0);['po','audience','creative','name','brand','market','client'].forEach(k=>c[k]=String(c[k]??''));
+  const rawA=Array.isArray(c.audiences)?c.audiences.filter(a=>a&&typeof a==='object'):[];
+  const legacy=rawA.length&&rawA.every(a=>a.share==null);
+  c.audiences=rawA.map(cleanAud);
+  if(legacy)evenShares(c.audiences);
+  // migrate v1–v4 free-text audience into the first audience card
+  if(!c.audiences.length&&c.audience.trim())c.audiences=[cleanAud({name:'Audience 1',interests:c.audience})];
+  delete c.audience;
+  // migrate v6 campaign-level exclusions onto every audience
+  const ox=c.exclusions;if(ox&&typeof ox==='object'){const std=Array.isArray(ox.std)?ox.std.filter(v=>EXCL_STD.includes(v)):[];
+   const txt=[['custom','Custom'],['interests','Interests'],['placements','Locations/placements'],['notes','Notes']].map(([k,l])=>String(ox[k]??'').trim()?l+': '+String(ox[k]).trim():'').filter(Boolean).join('\n');
+   c.audiences.forEach(a=>{if(!a.exStd.length&&!a.exText.trim()){a.exStd=EXCL_STD.filter(v=>std.includes(v));a.exText=txt}})}
+  delete c.exclusions;c.phasingOn=c.phasingOn!==false;});
  if(!db.campaigns.some(c=>c.id===db.active))db.active=db.campaigns[0]?.id??null;db.active=db.active==null?null:Number(db.active);lastId=Math.max(0,...db.campaigns.map(c=>+c.id||0))}
 let lastId=0;normalise();
 let tab='brief';
@@ -167,25 +214,26 @@ function modal(html,btns){document.getElementById('modalBody').innerHTML=html;co
  document.getElementById('modal').classList.remove('hidden')}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();if(e.key==='Enter'&&e.target.tagName==='INPUT'&&e.target.type!=='checkbox'){e.target.dispatchEvent(new Event('change'))}});
 function closeModal(){document.getElementById('modal').classList.add('hidden')}
-function ask(msg,fn){modal('<p>'+esc(msg)+'</p>',[['Cancel','ghost'],['Delete','danger',fn]])}
+function ask(msg,fn,label='Delete'){modal('<p>'+esc(msg)+'</p>',[['Cancel','ghost'],[label,'danger',fn]])}
 // re-render after the browser has moved focus, then restore focus to the same field
 let rt=null,pdown=false,pending=false;
 document.addEventListener('pointerdown',()=>pdown=true,true);
 ['pointercancel','blur'].forEach(ev=>window.addEventListener(ev,()=>{if(pdown){pdown=false;if(pending){pending=false;setTimeout(rerender,0)}}},true));
 document.addEventListener('pointerup',()=>{pdown=false;if(pending){pending=false;setTimeout(rerender,0)}},true);
 function rerender(){if(pdown){pending=true;return}clearTimeout(rt);rt=setTimeout(()=>{const a=document.activeElement,k=a&&a.dataset?a.dataset.k:null;renderAll();
- if(k){const n=document.querySelector('[data-k="'+k+'"]');if(n){n.focus();if(n.select&&n.type!=='date'&&n.tagName!=='SELECT')try{n.select()}catch(e){}}}},0)}
+ if(k){const n=document.querySelector('[data-k="'+k+'"]');if(n){n.focus();if(n.select&&n.type!=='date'&&n.type!=='checkbox'&&n.tagName!=='SELECT'&&n.tagName!=='TEXTAREA')try{n.select()}catch(e){}}}},0)}
 function cur(){return db.campaigns.find(c=>c.id===db.active)}
 function fmt(n,d=0){return isFinite(n)?Number(n).toLocaleString('en-GB',{maximumFractionDigits:d,minimumFractionDigits:d}):'–'}
 function money(n){const c=cur();return (SYM[c?.currency]||'')+fmt(n,0)}
-function esc(s){return String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 
 function newId(){lastId=Math.max(Date.now(),lastId+1);return lastId}
 function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function newCampaign(){
  const t=new Date(),e=new Date(t.getFullYear(),t.getMonth()+2,Math.min(t.getDate(),28));
  const c={id:newId(),client:'Demo Client',brand:'Demo Brand',name:'New Campaign',market:'UK',start:ymd(t),end:ymd(e),
-  objective:'Awareness',kpi1:'Reach',kpi2:'Impressions',budget:50000,currency:'GBP',status:'Draft',po:'',audience:'',creative:'',
+  objective:'Awareness',kpi1:'Reach',kpi2:'Impressions',budget:50000,currency:'GBP',status:'Draft',po:'',creative:'',
+  audiences:[cleanAud({name:'Audience 1',share:100})],phasingOn:true,
   alloc:{Meta:50,TikTok:50},funnel:{Awareness:60,Consideration:30,Conversion:10},phasing:{}};
  db.campaigns.push(c);db.active=c.id;save();renderAll();
 }
@@ -217,9 +265,51 @@ function renderBrief(c){
  document.getElementById('briefFields').innerHTML=BRIEF.map(([k,l,t])=>{
   if(t.startsWith('sel:'))return `<div><label>${l}</label><select data-f="${k}" data-k="br-${k}">${t.slice(4).split(',').map(o=>`<option ${c[k]===o?'selected':''}>${o}</option>`).join('')}</select></div>`;
   return `<div><label>${l}</label><input type="${t}" data-f="${k}" data-k="br-${k}" value="${esc(c[k])}"></div>`}).join('');
- document.querySelectorAll('[data-f="audience"]')[0].value=c.audience;document.querySelectorAll('[data-f="creative"]')[0].value=c.creative;
+ document.querySelector('[data-f="creative"]').value=c.creative;
  document.querySelectorAll('#tab-brief [data-f]').forEach(el=>el.onchange=()=>{c[el.dataset.f]=el.type==='number'?Math.max(0,+el.value||0):el.value;save();rerender()});
 }
+
+// ---------- Audiences ----------
+function gendersLabel(a){return a.genders.length===GENDERS.length?'All genders':a.genders.join(', ')||'–'}
+function agesLabel(a){return a.ages.length===AGES.length?'18-65+':a.ages.join(', ')||'–'}
+function exLabel(a){return [...a.exStd,...a.exText.split(/[\n,]+/).map(x=>x.trim()).filter(Boolean)].join(', ')}
+function audLabel(a,i){return (a.name.trim()||'Audience '+(i+1))+' ['+a.type+'; '+agesLabel(a)+'; '+gendersLabel(a)+(a.size?'; size '+a.size:'')+(a.source!=='None'?'; '+a.source:'')+(exLabel(a)?'; excl. '+exLabel(a):'')+']'}
+function chip(i,f,v,on){return `<label class="chip ${on?'on':''}"><input type="checkbox" data-k="au-${i}-${f}-${v}" ${on?'checked':''} onchange="toggleAud(${i},'${f}','${v}',this.checked)">${v}</label>`}
+function opts(list,sel){return list.map(o=>`<option ${o===sel?'selected':''}>${esc(o)}</option>`).join('')}
+function renderAud(c){
+ const el=document.getElementById('audList'),at=audTotal(c);
+ document.getElementById('audStatus').innerHTML=!c.audiences.length?'<span class="note">Add an audience to split budget.</span>':Math.abs(at-100)<0.01?'<span class="pill ok">100% allocated</span>':`<span class="pill err">${fmt(at,1)}% allocated</span>`;
+ if(!c.audiences.length){el.innerHTML='<div class="card note">No audiences yet. Click <b>+ Add audience</b> to create one.</div>';return}
+ el.innerHTML=c.audiences.map((a,i)=>{const third=a.source!=='None';return `<div class="card">
+  <div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(a.name.trim()||'Audience '+(i+1))}${a.size?` <span class="note">· ${fmt(a.size)}</span>`:''} <span class="note">· ${fmt(a.share,1)}% · ${money(c.budget*a.share/100)}</span></h2><button class="danger small" onclick="delAud(${i})">Remove</button></div>
+  <div class="grid" style="margin-top:12px">
+   <div><label>Audience name</label><input data-k="au-${i}-name" value="${esc(a.name)}" placeholder="e.g. Cocktail enthusiasts" onchange="setAud(${i},'name',this.value)"></div>
+   <div><label>Audience size</label><input type="number" min="0" step="1" data-k="au-${i}-size" value="${a.size||''}" placeholder="e.g. 1200000" onchange="setAud(${i},'size',Math.max(0,Math.round(+this.value||0)))"></div>
+   <div><label>Budget % · ${money(c.budget*a.share/100)}</label><input type="number" min="0" max="100" step="0.01" data-k="au-${i}-share" value="${a.share}" onchange="setAud(${i},'share',Math.max(0,Math.min(100,+this.value||0)))"></div>
+   <div><label>Audience type</label><select data-k="au-${i}-type" onchange="setAud(${i},'type',this.value)">${opts(AUD_TYPES,a.type)}</select></div>
+  </div>
+  <div class="field"><label>Age ranges</label><div class="chips">${AGES.map(g=>chip(i,'ages',g,a.ages.includes(g))).join('')}<button class="ghost small" onclick="setAll(${i},'ages')">${a.ages.length===AGES.length?'Clear':'All ages'}</button></div></div>
+  <div><label>Gender</label><div class="chips">${GENDERS.map(g=>chip(i,'genders',g,a.genders.includes(g))).join('')}<button class="ghost small" onclick="setAll(${i},'genders')">${a.genders.length===GENDERS.length?'Clear':'All genders'}</button></div></div>
+  <div><label>Interest targeting</label><textarea data-k="au-${i}-interests" placeholder="e.g. Cocktails, Fine dining, Weekend travel" onchange="setAud(${i},'interests',this.value)">${esc(a.interests)}</textarea></div>
+  <div class="grid field"><div><label>3rd-party audience source</label><select data-k="au-${i}-source" onchange="setAud(${i},'source',this.value)">${opts(SOURCES,a.source)}</select></div></div>
+  <div class="field"><label>3rd-party audience details</label><textarea data-k="au-${i}-details" ${third?'placeholder="Segment names / IDs, taxonomy path, match rate, data CPM, activation route"':'disabled placeholder="Select a 3rd-party source to add details"'} onchange="setAud(${i},'details',this.value)">${esc(a.details)}</textarea></div>
+  <div class="field"><label>Exclusions</label><div class="chips">${EXCL_STD.map((v,j)=>`<label class="chip ${a.exStd.includes(v)?'on':''}"><input type="checkbox" data-k="au-${i}-ex-${j}" ${a.exStd.includes(v)?'checked':''} onchange="toggleAud(${i},'exStd','${v}',this.checked)">${v}</label>`).join('')}</div>
+   <textarea data-k="au-${i}-exText" placeholder="Other exclusions, e.g. CRM purchasers last 30 days, Sober living interests, Audience Network" onchange="setAud(${i},'exText',this.value)">${esc(a.exText)}</textarea></div>
+ </div>`}).join('');
+}
+function evenShares(A){let left=100;A.forEach((a,i)=>{const v=i===A.length-1?+left.toFixed(2):+(100/A.length).toFixed(2);a.share=v;left-=v})}
+function audTotal(c){return c.audiences.reduce((t,a)=>t+a.share,0)}
+function audEven(){const c=cur();if(!c||!c.audiences.length)return;evenShares(c.audiences);save();renderAll()}
+// audience slices used by the plan; no audiences = one 'All audiences' slice
+function audSlices(c){const A=c.audiences;if(!A.length)return [{label:'All audiences',name:'All audiences',w:1}];
+ const t=audTotal(c);return A.map((a,i)=>({label:audLabel(a,i),name:a.name.trim()||'Audience '+(i+1),w:t>0?a.share/t:0,share:a.share})).filter(x=>x.w>0)}
+function setAud(i,k,v){const a=cur()?.audiences[i];if(!a)return;a[k]=v;save();rerender()}
+function toggleAud(i,f,v,on){const a=cur()?.audiences[i];if(!a)return;const s=new Set(a[f]);on?s.add(v):s.delete(v);a[f]=(f==='ages'?AGES:f==='genders'?GENDERS:EXCL_STD).filter(x=>s.has(x));save();rerender()}
+function setAll(i,f){const a=cur()?.audiences[i];if(!a)return;const list=f==='ages'?AGES:GENDERS;a[f]=a[f].length===list.length?[]:[...list];save();renderAll()}
+function addAud(){const c=cur();if(!c)return;c.audiences.push(cleanAud({name:'Audience '+(c.audiences.length+1),share:c.audiences.length?0:100}));save();renderAll();
+ const n=document.querySelector(`[data-k="au-${c.audiences.length-1}-name"]`);if(n){n.focus();n.select();n.scrollIntoView({block:'center'})}}
+function delAud(i){const c=cur(),a=c?.audiences[i];if(!a)return;ask('Remove "'+(a.name.trim()||'Audience '+(i+1))+'"?',()=>{c.audiences.splice(i,1);save();renderAll()},'Remove')}
+
 function renderBudget(c){
  const total=Object.values(c.alloc).reduce((a,b)=>a+(+b||0),0);
  document.getElementById('allocTable').innerHTML='<tr><th>Use</th><th>Platform</th><th class="num">%</th><th class="num">Gross</th></tr>'+PLATFORMS.map(p=>{const on=c.alloc[p]!=null;
@@ -230,6 +320,8 @@ function renderBudget(c){
  document.getElementById('funnelFields').innerHTML=Object.keys(c.funnel).map(k=>`<div><label>${k} % · ${money(c.budget*c.funnel[k]/100)}</label><input type="number" data-k="fn-${k}" value="${c.funnel[k]}" onchange="cur().funnel['${k}']=Math.max(0,Math.min(100,+this.value||0));save();rerender()"></div>`).join('');
  const ft=Object.values(c.funnel).reduce((a,b)=>a+ +b,0);
  document.getElementById('funnelStatus').innerHTML=Math.abs(ft-100)<0.01?'<span class="pill ok">Funnel totals 100%</span>':`<span class="pill err">Funnel totals ${fmt(ft,1)}%</span>`;
+ const pon=c.phasingOn;document.getElementById('phaseOn').classList.toggle('hidden',!pon);document.getElementById('phaseOff').classList.toggle('hidden',pon);
+ const tg=document.getElementById('phaseToggle');tg.classList.toggle('on',pon);tg.querySelector('input').checked=pon;
  const ph=phase(c),pt=Object.values(ph).reduce((a,b)=>a+b,0);
  document.getElementById('phaseTable').innerHTML='<tr><th>Month</th><th class="num">%</th><th class="num">Gross</th></tr>'+Object.entries(ph).map(([m,v])=>
   `<tr><td>${m}</td><td class="num"><input type="number" step="0.01" data-k="ph-${m}" value="${(+v).toFixed(2)}" onchange="setPhase('${m}',this.value)"></td><td class="num">${money(c.budget*v/100)}</td></tr>`).join('');
@@ -238,6 +330,7 @@ function renderBudget(c){
 function setPhase(m,v){const c=cur(),ph=phase(c);v=Math.max(0,Math.min(100,+v||0));
  const others=Object.keys(ph).filter(k=>k!==m),rest=others.reduce((a,k)=>a+ph[k],0);
  others.forEach(k=>ph[k]=rest>0?ph[k]/rest*(100-v):(100-v)/others.length);ph[m]=others.length?v:100;c.phasing=ph;save();rerender()}
+function togglePhasing(on){const c=cur();c.phasingOn=on;save();renderAll()}
 function resetPhase(){cur().phasing={};save();renderAll()}
 function toggleP(p,on){const c=cur();if(on)c.alloc[p]=0;else delete c.alloc[p];save();rerender()}
 function evenSplit(){const c=cur(),ks=Object.keys(c.alloc);let left=100;ks.forEach((k,i)=>{const v=i===ks.length-1?+left.toFixed(2):+(100/ks.length).toFixed(2);c.alloc[k]=v;left-=v});save();renderAll()}
@@ -250,19 +343,32 @@ function renderForecast(c){
  '<tr><td colspan="10" class="note">*Reach is summed across platforms and does not remove cross-platform duplication.</td></tr>';
 }
 function planRows(c){
- const ph=phase(c),pt=Object.values(ph).reduce((a,b)=>a+b,0)||1,out=[];
+ const flight=c.start&&c.end?c.start+' to '+c.end:'Full flight';
+ const ph=c.phasingOn?phase(c):(months(c).length?{[flight]:100}:{}),pt=Object.values(ph).reduce((a,b)=>a+b,0)||1,out=[];
  const fn=Object.entries(c.funnel).filter(([k,v])=>+v>0),ft=fn.reduce((a,[k,v])=>a+ +v,0)||1;
- calc(c).forEach(x=>fn.forEach(([stage,fv])=>Object.entries(ph).forEach(([m,v])=>{const s=(v/pt)*(+fv/ft);
-  out.push({Client:c.client,Brand:c.brand,Campaign:c.name,Market:c.market,Objective:c.objective,Platform:x.p,'Funnel Stage':stage,Month:m,Currency:c.currency,PO:c.po,
-   'Primary KPI':c.kpi1,'Gross Cost':x.gross*s,'Fees':x.fees*s,'Net Media':x.net*s,CPM:x.cpm,Impressions:x.imps*s,'Est Reach':x.reach*s,Clicks:x.clicks*s,Views:x.views*s,Conversions:x.conv*s,Audience:c.audience,Creative:c.creative})})));
+ const AS=audSlices(c);
+ calc(c).forEach(x=>AS.forEach(au=>fn.forEach(([stage,fv])=>Object.entries(ph).forEach(([m,v])=>{const s=au.w*(v/pt)*(+fv/ft);
+  out.push({Client:c.client,Brand:c.brand,Campaign:c.name,Market:c.market,Objective:c.objective,Platform:x.p,Audience:au.name,'Funnel Stage':stage,Month:m,Currency:c.currency,PO:c.po,
+   'Primary KPI':c.kpi1,'Gross Cost':x.gross*s,'Fees':x.fees*s,'Net Media':x.net*s,CPM:x.cpm,Impressions:x.imps*s,'Est Reach':x.reach*s,Clicks:x.clicks*s,Views:x.views*s,Conversions:x.conv*s,'Audience Detail':au.label,Creative:c.creative})}))));
  return out}
 function renderPlan(c){
- const rows=planRows(c);if(!rows.length){const why=!Object.keys(c.alloc).length?'No platforms selected (Budget tab).':!months(c).length?'Campaign dates are missing or the end date is before the start date (Brief tab).':'All funnel stages are 0% (Budget tab).';document.getElementById('planTable').innerHTML='<tr><td>'+why+'</td></tr>';return}
- const cols=['Platform','Funnel Stage','Month','Gross Cost','Fees','Net Media','CPM','Impressions','Est Reach','Clicks','Views','Conversions'];
- document.getElementById('planTable').innerHTML='<tr>'+cols.map(k=>`<th>${k}</th>`).join('')+'</tr>'+rows.map(r=>'<tr>'+cols.map(k=>`<td class="${typeof r[k]==='number'?'num':''}">${typeof r[k]==='number'?(['Gross Cost','Fees','Net Media'].includes(k)?money(r[k]):fmt(r[k],k==='CPM'?2:0)):esc(r[k])}</td>`).join('')+'</tr>').join('');
+ renderAudPlan(c);
+ const rows=planRows(c);if(!rows.length){const why=!Object.keys(c.alloc).length?'No platforms selected (Budget tab).':c.audiences.length&&!audSlices(c).length?'All audiences are 0% (Audiences tab).':!months(c).length?'Campaign dates are missing or the end date is before the start date (Brief tab).':'All funnel stages are 0% (Budget tab).';document.getElementById('planTable').innerHTML='<tr><td>'+why+'</td></tr>';return}
+ document.getElementById('planNote').textContent=c.phasingOn?'One line per platform × audience × funnel stage × month. Audience, funnel and phasing splits are normalised to 100%.':'Phasing off: one line per platform × audience × funnel stage for the full flight. Audience and funnel splits are normalised to 100%.';
+ const cols=['Platform','Audience','Funnel Stage',c.phasingOn?'Month':'Flight','Gross Cost','Fees','Net Media','CPM','Impressions','Est Reach','Clicks','Views','Conversions'];
+ document.getElementById('planTable').innerHTML='<tr>'+cols.map(k=>`<th>${k}</th>`).join('')+'</tr>'+rows.map(r=>(r.Flight=r.Month,'<tr>')+cols.map(k=>`<td class="${typeof r[k]==='number'?'num':''}">${typeof r[k]==='number'?(['Gross Cost','Fees','Net Media'].includes(k)?money(r[k]):fmt(r[k],k==='CPM'?2:0)):esc(r[k])}</td>`).join('')+'</tr>').join('');
 }
-function exportCSV(){const c=cur(),rows=planRows(c);if(!rows.length){modal('<p>Nothing to export yet – check the Media Plan tab for what is missing.</p>',[['OK','']]);return}const h=Object.keys(rows[0]);
- const csv=[h.join(',')].concat(rows.map(r=>h.map(k=>{let v=r[k];if(typeof v==='number')v=v.toFixed(2);return '"'+String(v??'').replace(/"/g,'""')+'"'}).join(','))).join('\n');
+function renderAudPlan(c){
+ const t=calc(c).reduce((a,x)=>{['gross','fees','net','imps','reach','clicks','views','conv'].forEach(k=>a[k]=(a[k]||0)+x[k]);return a},{});
+ const AS=c.audiences.length?c.audiences.map((a,i)=>{const tot=audTotal(c);return {name:a.name.trim()||'Audience '+(i+1),share:a.share,w:tot>0?a.share/tot:0,a}}):[{name:'All audiences',share:100,w:1}];
+ const cols=['Audience','Budget %','Gross','Fees','Net Media','Impressions','Est Reach','Clicks','Views','Conversions'];
+ const row=(n,sh,w,b)=>`<tr${b?' style="font-weight:700"':''}><td>${esc(n)}</td><td class="num">${fmt(sh,1)}%</td><td class="num">${money((t.gross||0)*w)}</td><td class="num">${money((t.fees||0)*w)}</td><td class="num">${money((t.net||0)*w)}</td>`+['imps','reach','clicks','views','conv'].map(k=>`<td class="num">${fmt((t[k]||0)*w)}</td>`).join('')+'</tr>';
+ const sum=AS.reduce((a,x)=>a+x.share,0);
+ document.getElementById('audPlanTable').innerHTML='<tr>'+cols.map((k,i)=>`<th class="${i?'num':''}">${k}</th>`).join('')+'</tr>'+AS.map(x=>row(x.name,x.share,x.w)).join('')+(AS.length>1?row('Total',sum,AS.some(x=>x.w>0)?1:0,true):'');
+ document.getElementById('audPlanNote').innerHTML=!c.audiences.length?'No audiences set – the full budget is shown as "All audiences". Add audiences in the Audiences tab.':
+  Math.abs(sum-100)<0.01?'Audience split is set in the Audiences tab. Forecasts use the same platform benchmarks for every audience.':`<span class="pill err">Audience split totals ${fmt(sum,1)}%</span> Values are scaled to 100% so the plan still matches the budget. Fix in the Audiences tab.`}
+function exportCSV(){const c=cur(),rows=planRows(c);if(!rows.length){modal('<p>Nothing to export yet – check the Media Plan tab for what is missing.</p>',[['OK','']]);return}const h=Object.keys(rows[0]).filter(k=>k!=='Flight');const hl=h.map(k=>k==='Month'&&!c.phasingOn?'Flight':k);
+ const csv=[hl.join(',')].concat(rows.map(r=>h.map(k=>{let v=r[k];if(typeof v==='number')v=v.toFixed(2);return '"'+String(v??'').replace(/"/g,'""')+'"'}).join(','))).join('\n');
  dl('\ufeff'+csv,(c.brand+'_'+c.name+'_MediaPlan.csv').replace(/[\\/:*?"<>|]/g,'').replace(/\s+/g,'_'),'text/csv')}
 function dl(data,name,type){let ok=true;try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}catch(e){ok=false}
  if(!ok||window.self!==window.top){modal('<h2>'+esc(name)+'</h2><p class="note">If the download did not start (some previews block downloads), copy the text below and save it as <b>'+esc(name)+'</b>.</p><textarea id="dlText" readonly></textarea>',[['Copy','',()=>{navigator.clipboard&&navigator.clipboard.writeText(data)}],['Close','ghost']]);document.getElementById('dlText').value=data.replace(/^\ufeff/,'')}}
@@ -279,9 +385,16 @@ function resetBench(){db.bench=clone(DEFAULT_BENCH);save();renderAll()}
 
 function renderSummary(c){
  const r=calc(c),t=k=>r.reduce((a,x)=>a+x[k],0),alloc=Object.values(c.alloc).reduce((a,b)=>a+(+b||0),0);
- const checks=[['Dates valid',!!(c.start&&c.end&&c.end>=c.start)],['Flight ≤ 36 months',months(c).length<36||months(c)[35]>=c.end.slice(0,7)],['Budget > 0',c.budget>0],['Allocation = 100%',Math.abs(alloc-100)<0.01],['Audience defined',!!c.audience.trim()],['Creative defined',!!c.creative.trim()],['PO entered',!!c.po.trim()],['Phasing = 100%',(()=>{const v=Object.values(phase(c));return v.length>0&&Math.abs(v.reduce((a,b)=>a+b,0)-100)<0.1})()],['Funnel = 100%',Math.abs(Object.values(c.funnel).reduce((a,b)=>a+ +b,0)-100)<0.01]];
+ const A=c.audiences,third=A.filter(a=>a.source!=='None');
+ const checks=[['Dates valid',!!(c.start&&c.end&&c.end>=c.start)],...(c.phasingOn?[['Flight ≤ 36 months',months(c).length<36||months(c)[35]>=c.end.slice(0,7)]]:[]),['Budget > 0',c.budget>0],['Allocation = 100%',Math.abs(alloc-100)<0.01],
+  ['Audience defined',A.some(a=>a.name.trim())],['Audience demographics set',A.length>0&&A.every(a=>a.ages.length&&a.genders.length)],...(A.length?[['Audience split = 100%',Math.abs(audTotal(c)-100)<0.01]]:[]),
+  ...(third.length?[['3rd-party details added',third.every(a=>a.details.trim())]]:[]),
+  ['Creative defined',!!c.creative.trim()],['PO entered',!!c.po.trim()],...(c.phasingOn?[['Phasing = 100%',(()=>{const v=Object.values(phase(c));return v.length>0&&Math.abs(v.reduce((a,b)=>a+b,0)-100)<0.1})()]]:[]),['Funnel = 100%',Math.abs(Object.values(c.funnel).reduce((a,b)=>a+ +b,0)-100)<0.01]];
+ const audHtml=A.length?A.map((a,i)=>`<div class="stat"><span>${esc(a.name.trim()||'Audience '+(i+1))}<div class="note">${esc(a.type)} · ${esc(agesLabel(a))} · ${esc(gendersLabel(a))}${a.source!=='None'?' · '+esc(a.source):''}</div>${exLabel(a)?`<div class="note">Excl: ${esc(exLabel(a))}</div>`:''}</span><span>${fmt(a.share,1)}%<div class="note">${a.size?fmt(a.size):'–'}</div></span></div>`).join('')+
+  `<div class="stat"><span>Combined size*</span><span>${fmt(A.reduce((s,a)=>s+a.size,0))}</span></div><p class="note" style="margin-bottom:0">*Summed; audiences may overlap.</p>`:'<span class="note">None – add in the Audiences tab.</span>';
  document.getElementById('summary').innerHTML=(storageOK?'':'<div class="card"><span class="pill warn">Not saving</span><p class="note">This view blocks browser storage. Use Backup JSON before closing, or open the file directly in Edge/Chrome.</p></div>')+`<div class="card"><b>${esc(c.name)}</b><div class="note">${esc(c.client)} · ${esc(c.brand)} · ${esc(c.market)}</div></div>
  <div class="card">${[['Gross budget',money(c.budget)],['Net media',money(t('net'))],['Impressions',fmt(t('imps'))],['Est. reach',fmt(t('reach'))],['Clicks',fmt(t('clicks'))],['Views',fmt(t('views'))],['Conversions',fmt(t('conv'))]].map(([a,b])=>`<div class="stat"><span>${a}</span><span>${b}</span></div>`).join('')}</div>
+ <div class="card"><h3 style="margin-top:0">Audiences (${A.length})</h3>${audHtml}</div>
  <div class="card"><h3 style="margin-top:0">Platform split</h3>${r.map(x=>`<div class="row" style="justify-content:space-between"><span>${x.p}</span><span>${fmt(c.alloc[x.p],1)}%</span></div><div class="bar"><div style="width:${Math.min(100,c.alloc[x.p])}%"></div></div>`).join('')||'<span class="note">None</span>'}</div>
  <div class="card"><h3 style="margin-top:0">Plan checks</h3>${checks.map(([l,ok])=>`<div class="stat"><span>${l}</span><span class="pill ${ok?'ok':'err'}">${ok?'OK':'Missing'}</span></div>`).join('')}</div>`;
 }
@@ -292,7 +405,7 @@ function renderAll(){
  document.getElementById('emptyState').classList.toggle('hidden',!!c||tab==='settings');
  if(!c){if(tab!=='settings')document.getElementById('tab-'+tab).classList.add('hidden');
   document.getElementById('summary').innerHTML='<p class="note">Create a campaign to start.</p>';return}
- renderBrief(c);renderBudget(c);renderForecast(c);renderPlan(c);renderSummary(c);
+ renderBrief(c);renderAud(c);renderBudget(c);renderForecast(c);renderPlan(c);renderSummary(c);
 }
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));renderAll()});
 if(!db.campaigns.length)newCampaign();else renderAll();
